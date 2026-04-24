@@ -1,0 +1,13 @@
+# Build artifacts
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+
+# SQL build outputs
+*.dacpac
+*.bacpac
+*.binlog
+*.log

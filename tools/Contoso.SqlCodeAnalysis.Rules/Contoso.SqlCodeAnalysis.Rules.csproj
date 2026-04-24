@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>disable</ImplicitUsings>
+
+        <!-- Pacchettizziamo come NuGet consumabile dal .sqlproj -->
+        <IsPackable>true</IsPackable>
+        <PackageId>Contoso.SqlCodeAnalysis.Rules</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Contoso Data Platform</Authors>
+        <Description>Regole T-SQL custom Contoso (sicurezza, compliance) per Microsoft.Build.Sql.</Description>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <NoPackageAnalysis>true</NoPackageAnalysis>
+
+        <!-- Le DLL devono finire sotto tools/ così il SqlBuild le carica come extension -->
+        <BuildOutputTargetFolder>tools</BuildOutputTargetFolder>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SqlServer.DacFx" Version="162.5.57" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).dll" Pack="true" PackagePath="tools/" />
+    </ItemGroup>
+
+</Project>

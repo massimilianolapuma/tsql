@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Suppression localizzate per SQL Code Analysis.
+  REGOLA: ogni <SuppressedFile> DEVE avere un commento con:
+    - rule ID
+    - motivazione
+    - owner (GitHub handle)
+    - issue di tracking (se temporanea)
+-->
+<StaticCodeAnalysis version="2"
+    xmlns="urn:Microsoft.Data.Tools.Schema.StaticCodeAnalysis">
+
+    <!-- SR0001 (SELECT *) tollerato in view di compatibilità verso il legacy ERP.
+       Owner: @data-platform   Issue: #4512 (rimozione prevista Q3 2026) -->
+    <SuppressedFile FilePath="Views\Legacy\vw_ErpOrders.sql">
+        <SuppressedRule Category="Microsoft.Rules.Data" RuleId="SR0001" />
+    </SuppressedFile>
+
+    <!-- SR0016 (prefisso sp_) richiesto dal contratto del modulo Reporting.
+       Owner: @reporting-team   Permanente. -->
+    <SuppressedFile FilePath="StoredProcedures\Reporting\sp_GetDailySnapshot.sql">
+        <SuppressedRule Category="Microsoft.Rules.Data" RuleId="SR0016" />
+    </SuppressedFile>
+
+</StaticCodeAnalysis>

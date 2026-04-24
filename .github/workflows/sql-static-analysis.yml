@@ -1,0 +1,85 @@
+name: SQL Static Analysis
+
+on:
+    pull_request:
+        paths:
+            - "src/Database/**"
+            - "tools/Contoso.SqlCodeAnalysis.Rules/**"
+            - ".github/workflows/sql-static-analysis.yml"
+    push:
+        branches: [ main ]
+
+permissions:
+    contents: read
+    pull-requests: write
+    security-events: write # upload SARIF a code scanning
+
+jobs:
+    analyze:
+        runs-on: ubuntu-latest
+        env:
+            CI: "true"
+            DOTNET_NOLOGO: "true"
+            DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup .NET SDK
+              uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "8.0.x"
+
+            - name: Cache NuGet packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.nuget/packages
+                  key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.sqlproj',
+                      '**/packages.lock.json') }}
+                  restore-keys: ${{ runner.os }}-nuget-
+
+            - name: Build custom analysis rules
+              run: dotnet build tools/Contoso.SqlCodeAnalysis.Rules -c Release
+
+            # Build del .sqlproj con logger structured: produce binlog + console log con i codici SR*.
+            # -warnaserror è già controllato dal property TreatTSqlWarningsAsErrors quando CI=true,
+            # qui il '|| true' permette al converter SARIF di girare anche su build fallita.
+            - name: Build SQL project (capture diagnostics)
+              id: sqlbuild
+              run: |
+                  set -o pipefail
+                  dotnet build src/Database/Database.sqlproj \
+                    -c Release \
+                    -bl:artifacts/sqlbuild.binlog \
+                    -clp:NoSummary \
+                    /p:GenerateFullPaths=true \
+                    2>&1 | tee artifacts/sqlbuild.log
+              continue-on-error: true
+
+            - name: Convert MSBuild diagnostics to SARIF
+              run: |
+                  python tools/sql-analysis/build_log_to_sarif.py \
+                    --input  artifacts/sqlbuild.log \
+                    --repo-root "$GITHUB_WORKSPACE" \
+                    --tool-name "SqlCodeAnalysis" \
+                    --output artifacts/sql-analysis.sarif
+
+            - name: Upload SARIF to GitHub code scanning
+              uses: github/codeql-action/upload-sarif@v3
+              with:
+                  sarif_file: artifacts/sql-analysis.sarif
+                  category: tsql-static
+
+            - name: Upload raw artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: sql-analysis-logs
+                  path: artifacts/
+
+            # Fallisce il job se il build SQL ha riportato error.
+            - name: Fail job on SQL analysis errors
+              if: steps.sqlbuild.outcome == 'failure'
+              run: |
+                  echo "::error::SQL Code Analysis ha trovato errori bloccanti. Vedi tab Security e artifact 'sql-analysis-logs'."
+                  exit 1

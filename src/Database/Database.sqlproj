@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build">
+  <Sdk Name="Microsoft.Build.Sql" Version="1.0.0" />
+
+  <PropertyGroup>
+    <Name>ContosoSales</Name>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <ModelCollation>1033, CI</ModelCollation>
+
+    <!-- Abilita SQL Code Analysis ad ogni build -->
+    <RunSqlCodeAnalysis>True</RunSqlCodeAnalysis>
+
+    <!--
+      Sintassi <SqlCodeAnalysisRules>:
+        -RuleId         disabilita la regola
+        +RuleId         abilita la regola (default)
+        +!RuleId        abilita la regola con severity Error (blocca la build)
+      Le regole sono separate da ';'.
+
+      Policy di progetto (motivata in docs/tsql-analysis.md):
+        SR0001 Error  - SELECT * vietato in SP/view/TVF (rischio breakage su schema change)
+        SR0008 Error  - usare SCOPE_IDENTITY al posto di @@IDENTITY
+        SR0010 Error  - JOIN deprecati (sintassi *=, =*) vietati
+        SR0013 Error  - parametri OUTPUT non popolati su tutti i path
+        SR0011 Error  - caratteri speciali nei nomi oggetti
+        SR0016 Error  - prefisso sp_ vietato (collision con system SP)
+        SR0009 Off    - usiamo varchar(2) per codici ISO paese (eccezione documentata)
+    -->
+    <SqlCodeAnalysisRules>
+      +!Microsoft.Rules.Data.SR0001;
+      +!Microsoft.Rules.Data.SR0008;
+      +!Microsoft.Rules.Data.SR0010;
+      +!Microsoft.Rules.Data.SR0013;
+      +!Microsoft.Rules.Data.SR0011;
+      +!Microsoft.Rules.Data.SR0016;
+      -Microsoft.Rules.Data.SR0009
+    </SqlCodeAnalysisRules>
+
+    <!-- Tratta i warning SR* come errori solo in CI (override da riga di comando) -->
+    <TreatTSqlWarningsAsErrors Condition="'$(CI)' == 'true'">True</TreatTSqlWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Regole custom .NET caricate dall'engine di analisi -->
+  <ItemGroup>
+    <PackageReference Include="Contoso.SqlCodeAnalysis.Rules" Version="1.0.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
