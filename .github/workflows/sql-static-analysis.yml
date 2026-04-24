@@ -38,12 +38,20 @@ jobs:
                       '**/packages.lock.json') }}
                   restore-keys: ${{ runner.os }}-nuget-
 
-            - name: Build custom analysis rules
-              run: dotnet build tools/Contoso.SqlCodeAnalysis.Rules -c Release
+            - name: Prepare artifacts directory
+              run: mkdir -p artifacts artifacts/local-nuget
+
+            # Pack delle regole custom in un feed NuGet locale: il .sqlproj
+            # le restora via PackageReference (vedi NuGet.config -> local-nuget).
+            - name: Pack custom analysis rules
+              run: |
+                  dotnet pack tools/Contoso.SqlCodeAnalysis.Rules \
+                    -c Release \
+                    -o artifacts/local-nuget
 
             # Build del .sqlproj con logger structured: produce binlog + console log con i codici SR*.
             # -warnaserror è già controllato dal property TreatTSqlWarningsAsErrors quando CI=true,
-            # qui il '|| true' permette al converter SARIF di girare anche su build fallita.
+            # continue-on-error permette al converter SARIF di girare anche su build fallita.
             - name: Build SQL project (capture diagnostics)
               id: sqlbuild
               run: |
